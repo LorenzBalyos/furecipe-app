@@ -22,6 +22,8 @@ COPY . .
 
 # Install dependencies
 RUN composer install --no-dev --optimize-autoloader --ignore-platform-reqs
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Set permissions for Laravel storage
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
