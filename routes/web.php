@@ -11,13 +11,30 @@ use App\Http\Controllers\ProfileController;
 
 /**
  * Initialize connection with Google Cloud Firestore NoSQL Database
+ * Supporting direct JSON environment variables for cloud platforms
  */
 function getFirestore() {
+    $firebaseJson = env('FIREBASE_JSON');
+
+    // If running on Render with the Dashboard string configured
+    if (!empty($firebaseJson)) {
+        $config = json_decode($firebaseJson, true);
+        return new FirestoreClient([
+            'keyFile' => $config,
+            'transport' => 'rest'
+        ]);
+    }
+
+    // Fallback path matching for local offline development architectures
     $path = storage_path('firebase_credentials.json');
     if (!file_exists($path)) {
         $path = storage_path('app/firebase_credentials.json');
     }
-    putenv('GOOGLE_APPLICATION_CREDENTIALS=' . $path);
+
+    if (file_exists($path)) {
+        putenv('GOOGLE_APPLICATION_CREDENTIALS=' . $path);
+    }
+
     return new FirestoreClient(['transport' => 'rest']);
 }
 
@@ -59,7 +76,7 @@ Route::post('/login', function (Request $request) {
     return back()->withErrors(['email' => 'Invalid login credentials.']);
 });
 
-// --- 1. REDIRECT DIRECTLY TO OFFICIAL GOOGLE SCREEN (CLEAN REPAIR) ---
+// --- GOOGLE OAUTH REDIRECTS ---
 Route::get('/login/google', function () {
     $query = http_build_query([
         'client_id'     => env('GOOGLE_CLIENT_ID'),
@@ -68,7 +85,6 @@ Route::get('/login/google', function () {
         'scope'         => 'openid email profile',
         'access_type'   => 'online',
         'prompt'        => 'select_account'
-        // REMOVED 'client_secret' FROM HERE BECAUSE GOOGLE REJECTS IT NATIVELY!
     ]);
 
     return redirect('https://accounts.google.com/o/oauth2/v2/auth?' . $query);
@@ -80,7 +96,6 @@ Route::get('/login/google/callback', function (Request $request) {
     }
 
     try {
-        // Exchange authorization code for secure access tokens via standard curl post
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, 'https://oauth2.googleapis.com/token');
         curl_setopt($ch, CURLOPT_POST, true);
@@ -101,7 +116,6 @@ Route::get('/login/google/callback', function (Request $request) {
             return redirect('/login')->withErrors(['email' => 'Failed to obtain access token from Google.']);
         }
 
-        // Fetch user profile properties using our freshly issued token
         $profileCh = curl_init();
         curl_setopt($profileCh, CURLOPT_URL, 'https://www.googleapis.com/oauth2/v3/userinfo?access_token=' . $tokenResponse['access_token']);
         curl_setopt($profileCh, CURLOPT_RETURNTRANSFER, true);
@@ -116,7 +130,6 @@ Route::get('/login/google/callback', function (Request $request) {
 
         $email = $googleUser['email'];
 
-        // Direct check against Firestore NoSQL database
         $firestore = getFirestore();
         $userDoc = $firestore->collection('users')->document($email)->snapshot();
 
@@ -126,7 +139,6 @@ Route::get('/login/google/callback', function (Request $request) {
             ]);
         }
 
-        // Complete the authentication flow seamlessly without any OTP
         session([
             'user_email' => $email,
             'user_name'  => $userDoc->get('name')
@@ -152,17 +164,14 @@ Route::post('/register', function (Request $request) {
         'password' => ['required', 'string', 'min:6'],
     ]);
 
-    // Check if user already exists in Firestore before making OTP configurations
     $firestore = getFirestore();
     $existingUser = $firestore->collection('users')->document($request->email)->snapshot();
     if ($existingUser->exists()) {
         return back()->withErrors(['email' => 'This email address is already registered.']);
     }
 
-    // Generate numeric 6-digit verification code token for registration security
     $otpCode = rand(100000, 999999);
 
-    // Cache structural parameters into server memory for 15 minutes max
     session([
         'registration_data' => [
             'name' => $request->name,
@@ -173,13 +182,12 @@ Route::post('/register', function (Request $request) {
         'otp_expires_at' => now()->addMinutes(15)
     ]);
 
-    // Dispatch notification transaction out via SMTP mailing configurations
     try {
         Mail::raw("Your Furecipe security code verification pin token is: {$otpCode}. This expires within 15 minutes.", function ($message) use ($request) {
             $message->to($request->email)->subject('Verify Your Furecipe Platform Registration 🐾');
         });
     } catch (\Exception $e) {
-        // Fallback for offline local environments so tests don't throw syntax blocks
+        // Safe fallback
     }
 
     return redirect('/register/verify-otp');
@@ -202,7 +210,6 @@ Route::post('/register/verify-otp', function(Request $request) {
         return back()->with('error', 'The security code you entered is invalid.');
     }
 
-    // Explicit Database Save Transaction on matching validations to Firestore
     $userData = session('registration_data');
     $firestore = getFirestore();
     $firestore->collection('users')->document($userData['email'])->set([
@@ -212,7 +219,6 @@ Route::post('/register/verify-otp', function(Request $request) {
         'email_verified_at' => now()->toIso8601String()
     ]);
 
-    // Authorize session profile credentials safely
     session(['user_email' => $userData['email'], 'user_name' => $userData['name']]);
     session()->forget(['registration_data', 'registration_otp', 'otp_expires_at']);
 
@@ -226,7 +232,7 @@ Route::get('/logout', function () {
 });
 
 // =========================================================================
-// 3. CORE SECURE MOBILE APPLICATION WORKSPACE
+// 3. CORE SECURE APPLICATION WORKSPACE
 // =========================================================================
 Route::get('/dashboard', function (Request $request) {
     if (!session()->has('user_email')) return redirect('/login');
@@ -249,7 +255,7 @@ Route::get('/dashboard', function (Request $request) {
             }
         }
 
-        // Load Recipes matching pet_calculations structure
+        // Load Recipes
         $recipeDocs = $firestore->collection('pet_calculations')->where('owner_email', '=', $email)->documents();
         foreach ($recipeDocs as $doc) {
             if ($doc->exists()) {
@@ -274,16 +280,6 @@ Route::get('/dashboard', function (Request $request) {
     }
 
     $blogs = [
-        [
-            'title' => 'The Risk of Homemade Diets: Are You Missing Critical Minerals?',
-            'excerpt' => 'Feeding a real-food home-cooked diet without a verified balancing premix agent can slowly cause serious calcium-to-phosphorus ratio imbalances over time. Learn how to safeguard organ health.',
-            'date' => 'May 16, 2026'
-        ],
-        [
-            'title' => 'The Risk of Homemade Diets: Are You Missing Critical Minerals?',
-            'excerpt' => 'Feeding a real-food home-cooked diet without a verified balancing premix agent can slowly cause serious calcium-to-phosphorus ratio imbalances over time. Learn how to safeguard organ health.',
-            'date' => 'May 16, 2026'
-        ],
         [
             'title' => 'The Risk of Homemade Diets: Are You Missing Critical Minerals?',
             'excerpt' => 'Feeding a real-food home-cooked diet without a verified balancing premix agent can slowly cause serious calcium-to-phosphorus ratio imbalances over time. Learn how to safeguard organ health.',
