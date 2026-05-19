@@ -37,7 +37,4 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
-# Run migrations automatically on startup
-CMD php artisan migrate --force && apache2-foreground
-
 EXPOSE 80
