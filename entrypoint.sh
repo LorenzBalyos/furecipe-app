@@ -1,11 +1,11 @@
 #!/bin/sh
 
-# Clear any cached configuration files so Laravel reads Render Env Variables freshly
+# Safely clear the internal caches at boot time
 php artisan config:clear
 php artisan cache:clear
 
-# Run migrations automatically
+# Run database migrations
 php artisan migrate --force
 
-# Keep the default Apache container running process active
+# Start apache web server normally
 exec apache2-foreground
