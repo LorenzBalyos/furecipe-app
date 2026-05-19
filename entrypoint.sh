@@ -1,5 +1,7 @@
-#!/bin/bash
-# Wait for database, then run migrations
+#!/bin/sh
+
+# Run migrations automatically before the server turns on
 php artisan migrate --force
-# Start the web server
-apache2-foreground
+
+# Keep the default Apache container running process active
+exec apache2-foreground
