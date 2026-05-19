@@ -37,4 +37,12 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
+# ---- START OF ADDED ENTRYPOINT PROCESS ----
+# Give the entrypoint script execution permissions
+RUN chmod +x /var/www/html/entrypoint.sh
+
+# Force the container to use a shell execution wrapper for the script
+ENTRYPOINT ["/bin/sh", "/var/www/html/entrypoint.sh"]
+# ---- END OF ADDED ENTRYPOINT PROCESS ----
+
 EXPOSE 80
