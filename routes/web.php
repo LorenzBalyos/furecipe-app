@@ -14,7 +14,7 @@ use App\Http\Controllers\ProfileController;
  * Gracefully handles Render environments and local fallbacks smoothly.
  */
 function getFirestore() {
-    // 1. Force Render to use your verified credentials directly
+    // 1. Production Env (Directly injected using your fresh furecipe-914f28182a71.json file)
     if (isset($_SERVER['RENDER']) || env('APP_ENV') === 'production') {
         return new FirestoreClient([
             'projectId' => 'furecipe',
@@ -34,7 +34,7 @@ function getFirestore() {
         ]);
     }
 
-    // 2. Local Fallback Only (For your machine)
+    // 2. Local Fallback (Only executes on your local development machine)
     $path = storage_path('firebase_credentials.json');
     if (!file_exists($path)) {
          $path = storage_path('app/firebase_credentials.json');
