@@ -14,8 +14,8 @@ use App\Http\Controllers\ProfileController;
  * Gracefully handles Render environments and local fallbacks smoothly.
  */
 function getFirestore() {
-    // This is the ONLY code that will run on Render.
-    // It ignores files, ignores local storage, and uses your valid JSON object directly.
+    // We are hardcoding the credentials to bypass the file system entirely.
+    // This removes the dependency on file_exists() and storage_path().
     return new FirestoreClient([
         'projectId' => 'furecipe',
         'transport' => 'rest',
