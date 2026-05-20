@@ -14,13 +14,23 @@ use App\Http\Controllers\ProfileController;
  * Gracefully handles Render environments and local fallbacks smoothly.
  */
 function getFirestore() {
-    // We decode the JSON string directly from the Environment
-    $config = json_decode(env('FIREBASE_JSON'), true);
+    $keyFile = [
+        "type" => "service_account",
+        "project_id" => "furecipe",
+        "private_key_id" => "914f28182a71bf625b406a5795c222e6ddbb4b2d",
+        "private_key" => "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDlYEcvgMB+hYDg\nx53wSBkhf2P/CaST5LhUJMtCyXLZMeLtZvOaQu/i1rLX1/lPFGPGi17rDohpqHO2\nikMVa/F+jqFY7Xya1y/j3xbqulf4LFw7qADkjvgmjootZPqJ3lK4jo0IimwEfugI\n53SaiWAbiFndpDuo9c5ExPSV7WZQe1hbCKY+Gv7JveF/heNn3K6ovN0ILOoQwyBP\nXzmtRKS0nrjzsXKh+tTkDh8v+sP1pERpUJvDSgoUSpisCiedb/IPjvfE1rmrC+ad\nL5j2IFVjhxRf11b8c5YMSniSXUuhhY3M/yYMbKDGEuiZsEjKOzNfcAvnpxO+Vrr1\nGc557aD5AgMBAAECggEAEttHCYewdiDsMbkXVHveMlvHpl1uPd5CrQrX+ZCYCXT0\nGTIqepcKziok9QuYlOtchyOeqlI9MqUaMM/NqK2BYoxqhTtY0AiQCPqmZqY/ucjj\nzYpdMGz0ci8A+wRfIwW3j9vgNOs0QBZdZZtULFQje3/1Ffx8ucIjXTyXzYTWXBfv\n4TDxIWtgb8Gz7rVnGdhqtjpjRRKGheyX/ZCe3MpD3dNAyP/Kce1O+GfzISfgb7sD\nMqoAIbqwMh7oVB/9lSRW/FNOYmzQAQWiUKX3B6Q/06ugEJBdg0LxRa7e1p/1Izev\nuQ7WAf4KBC3PISunvOdPR3im+C1fae6SIeipO1a1UQKBgQD/OZzxrCUlgUnhDyyk\nKLZo19+MFVnHK0ZOPLs0O+o/+z8AMLj3xwnppXXZ6eJF8knAd/ZaukH+n/rB/SbB\n5dKdDvPU4/dUnfQBOipCGbZ1D1Rf6qswFq+IyJkLTo/cGAzPFw8mBETX4ZU/g9xv\nH3OphEC23V5dZdVf2/C1cRPIXQKBgQDmEpKS7XOxkbdQnEDVOhKG8gaho/Ezkan2\n/DMyuMeBoBb6Pg6Z6ZJmFjXGu98cxENEhj4B8mwh+FqOTIv7XsuPGTywOCp3IYK+\nTKjDCrJY9bcEh2Xte/1UprGThfhepQoNL/7GQrl32geh0Pip4xVkgNQk3fuhE2br\nCG3MlNoBTQKBgHfhWN2PTTdrngcPeJl24g8m7sK+uJe7tN9E2W20gtggrDvrpsYD\ngJ11cYC0weq23nuAHYAKIrt163O48755s86/2jnyBheBxb3Z00WPDEu5spkHAfep\ngDPQfUp5UUtBJKsVGrFxqeB4/gCCcETl0g8apsb9/bgDABFxnoOrJG6lAoGBAJiy\KuWpAugPNgMiMUVTTYiSiSQukp8PRibOK4y2ZnL5tUZQeZBdHPT0OKy1c9a7y4ln\nLzBLnMjO9AsNcrpap+9JaKXsIQMAEq4KYtdP+h5gth8jXdrIN9I+8AxhFf56urkV\n6ZncHwwUgIw9DUxzkncpqaLuUVsObXgAGB93i1jhAoGAI4DzOcGOj5eHUVjF2QU5\nZjwHfiMcktr1rgPg12/s3J9CBn8dOBi44lpw0aG+Q9LxL9ocqyIcQ40wOMQ3V/R1\nyQKZRl6mApV5h/8TczXUq0Ds6zL2ONXObt+0sOMWbftasOm2ilxwKRHvdIWHJk5r\nMpJMxVjhmCO2N50R7ifw3uY=\n-----END PRIVATE KEY-----\n",
+        "client_email" => "firebase-adminsdk-fbsvc@furecipe.iam.gserviceaccount.com",
+        "client_id" => "100422765697958537065",
+        "auth_uri" => "https://accounts.google.com/o/oauth2/auth",
+        "token_uri" => "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url" => "https://www.googleapis.com/oauth2/v1/certs",
+        "client_x509_cert_url" => "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40furecipe.iam.gserviceaccount.com"
+    ];
 
     return new \Google\Cloud\Firestore\FirestoreClient([
         'projectId' => 'furecipe',
         'transport' => 'rest',
-        'keyFile' => $config
+        'keyFile' => $keyFile
     ]);
 }
 // =========================================================================
