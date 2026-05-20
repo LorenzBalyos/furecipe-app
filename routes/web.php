@@ -11,18 +11,35 @@ use App\Http\Controllers\ProfileController;
 
 /**
  * Initialize connection with Google Cloud Firestore NoSQL Database
- * Hardcoded direct fallback configuration array to completely bypass Render environment breakages
+ * Gracefully handles Render environments and local fallbacks smoothly.
  */
 function getFirestore() {
-    // 1. Check local environment credentials file first
+    // 1. Production Deployment (Render) - Check if explicit configuration array can be used
+    $fallbackConfig = [
+        "type"                        => "service_account",
+        "project_id"                  => "furecipe",
+        "private_key_id"              => "b0c5e9888d72c64c75e0dba512325a1417fcefa6",
+        "private_key"                 => "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCmK7u8YvWc68u6\n7L1pAexmZf38YIeOa98zYtFkR8w96PzX05P1V8WcQWb9z74D8Y88A58X2W38vG9w\nK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38\nvG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8\nX8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9\nyv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8\nQy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6\naR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z\n2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9w\nK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W3\n8vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O\n8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z\n9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n\n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D\n6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5\nz2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9\nwK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W\n38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9\nO8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7\nz9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7\nn8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8\nSStvsh39sfSks92Sksjdhwshd9wshd9wshd9wshd9wshd9wshd9wshd9wskLks\n-----END PRIVATE KEY-----\n",
+        "client_email"               => "firebase-adminsdk-pmed8@furecipe.iam.gserviceaccount.com",
+        "client_id"                  => "105581559812920235372",
+        "auth_uri"                    => "https://accounts.google.com/o/oauth2/auth",
+        "token_uri"                   => "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url" => "https://www.googleapis.com/oauth2/v1/certs",
+        "client_x509_cert_url"        => "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-pmed8%40furecipe.iam.gserviceaccount.com"
+    ];
+
+    // Check if we are running on Render cloud environment (if file doesn't exist locally, prioritize explicit config array)
     $path = storage_path('firebase_credentials.json');
     if (!file_exists($path)) {
         $path = storage_path('app/firebase_credentials.json');
     }
 
     if (file_exists($path)) {
-        $fileConfig = json_decode(file_get_contents($path), true);
-        if (is_array($fileConfig)) {
+        $contents = file_get_contents($path);
+        $fileConfig = json_decode($contents, true);
+
+        // Ensure the json data has actual valid parameters before feeding it to Firestore Client
+        if (is_array($fileConfig) && isset($fileConfig['project_id'])) {
             return new FirestoreClient([
                 'keyFile' => $fileConfig,
                 'transport' => 'rest'
@@ -30,23 +47,10 @@ function getFirestore() {
         }
     }
 
-    // 2. Production Deployment (Render) - Explicit credential mapping structure
-    // Passing the configuration array under 'keyFile' with clear values forces
-    // the underlying Google Auth Wrapper to recognize the credentials array directly.
+    // Direct production deployment fallback block
     return new FirestoreClient([
         'transport' => 'rest',
-        'keyFile' => [
-            "type"                        => "service_account",
-            "project_id"                  => "furecipe",
-            "private_key_id"              => "b0c5e9888d72c64c75e0dba512325a1417fcefa6",
-            "private_key"                 => "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCmK7u8YvWc68u6\n7L1pAexmZf38YIeOa98zYtFkR8w96PzX05P1V8WcQWb9z74D8Y88A58X2W38vG9w\nK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38\nvG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8\nX8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9\nyv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8\nQy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6\naR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z\n2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9w\nK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W3\n8vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O\n8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z\n9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n\n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D\n6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5\nz2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9\nwK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W\n38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9\nO8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7\nz9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7\nn8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8\nSStvsh39sfSks92Sksjdhwshd9wshd9wshd9wshd9wshd9wshd9wshd9wskLks\n-----END PRIVATE KEY-----\n",
-            "client_email"               => "firebase-adminsdk-pmed8@furecipe.iam.gserviceaccount.com",
-            "client_id"                  => "105581559812920235372",
-            "auth_uri"                    => "https://accounts.google.com/o/oauth2/auth",
-            "token_uri"                   => "https://oauth2.googleapis.com/token",
-            "auth_provider_x509_cert_url" => "https://www.googleapis.com/oauth2/v1/certs",
-            "client_x509_cert_url"        => "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-pmed8%40furecipe.iam.gserviceaccount.com"
-        ]
+        'keyFile' => $fallbackConfig
     ]);
 }
 
