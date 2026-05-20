@@ -11,14 +11,20 @@ use App\Http\Controllers\ProfileController;
 
 /**
  * Initialize connection with Google Cloud Firestore NoSQL Database
- * Supporting direct JSON environment variables for cloud platforms
+ * Supporting direct JSON environment variables and container file paths
  */
 function getFirestore() {
     $firebaseJson = env('FIREBASE_JSON');
 
-    // If running on Render with the Dashboard string configured
     if (!empty($firebaseJson)) {
-        $config = json_decode($firebaseJson, true);
+        // If the variable points to our injected file path inside the Docker container
+        if (file_exists($firebaseJson)) {
+            $config = json_decode(file_get_contents($firebaseJson), true);
+        } else {
+            // Fallback if it is a raw single-line JSON string
+            $config = json_decode($firebaseJson, true);
+        }
+
         return new FirestoreClient([
             'keyFile' => $config,
             'transport' => 'rest'
