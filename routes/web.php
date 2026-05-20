@@ -11,24 +11,46 @@ use App\Http\Controllers\ProfileController;
 
 /**
  * Initialize connection with Google Cloud Firestore NoSQL Database
- * Supporting direct JSON environment variables and container file paths with sanitization
+ * Fully armored fail-safe structure to protect against Cloud provider string manipulation
  */
 function getFirestore() {
     $firebaseJson = env('FIREBASE_JSON');
 
     if (!empty($firebaseJson)) {
-        // 1. If it points to a physical file injected inside Render/Docker container
+        // Handle physical file injection paths gracefully
         if (file_exists($firebaseJson)) {
             $config = json_decode(file_get_contents($firebaseJson), true);
         } else {
-            // 2. Clean the string from common cloud provider environment parsing traps
+            // Clean up common string issues (hidden breaks, escaped slashes)
             $cleanJson = trim($firebaseJson);
-            $cleanJson = stripslashes($cleanJson); // Removes accidental escaping backslashes
+            $cleanJson = stripslashes($cleanJson);
+
+            // Critical: Re-map line breaks in private keys that break json_decode
+            if (str_contains($cleanJson, '----------')) {
+                $cleanJson = str_replace(["\r", "\n"], '\n', $cleanJson);
+            }
 
             $config = json_decode($cleanJson, true);
         }
 
-        // Ensure $config was parsed into a valid array before handing it over
+        // Direct Param Fallback: If JSON decoding still fails, build the config array manually from raw parts
+        if (!is_array($config) && str_contains($firebaseJson, 'private_key')) {
+            preg_match('/"project_id"\s*:\s*"([^"]+)"/', $firebaseJson, $projMatches);
+            preg_match('/"client_email"\s*:\s*"([^"]+)"/', $firebaseJson, $emailMatches);
+            preg_match('/"private_key"\s*:\s*"([^"]+)"/', $firebaseJson, $keyMatches);
+
+            // Reconstruct if matches are caught cleanly
+            if (!empty($projMatches[1]) && !empty($keyMatches[1])) {
+                $config = [
+                    "type" => "service_account",
+                    "project_id" => $projMatches[1],
+                    "private_key" => str_replace('\n', "\n", $keyMatches[1]),
+                    "client_email" => $emailMatches[1] ?? ""
+                ];
+            }
+        }
+
+        // Fire connection if we successfully managed to build/parse the configurations
         if (is_array($config)) {
             return new FirestoreClient([
                 'keyFile' => $config,
@@ -37,20 +59,23 @@ function getFirestore() {
         }
     }
 
-    // 3. Fallback path matching for local offline development architectures
+    // Local workspace absolute path structure fallback rules
     $path = storage_path('firebase_credentials.json');
     if (!file_exists($path)) {
         $path = storage_path('app/firebase_credentials.json');
     }
 
     if (file_exists($path)) {
-        return new FirestoreClient([
-            'keyFile' => json_decode(file_get_contents($path), true),
-            'transport' => 'rest'
-        ]);
+        $fileConfig = json_decode(file_get_contents($path), true);
+        if (is_array($fileConfig)) {
+            return new FirestoreClient([
+                'keyFile' => $fileConfig,
+                'transport' => 'rest'
+            ]);
+        }
     }
 
-    // Ultimate fallback matching system environment settings
+    // Absolute blind initialization fallback setup
     return new FirestoreClient(['transport' => 'rest']);
 }
 
