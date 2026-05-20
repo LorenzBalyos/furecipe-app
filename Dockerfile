@@ -23,10 +23,9 @@ WORKDIR /var/www/html
 COPY . .
 
 # --------------------------------------------------------------------------
-# CRITICAL FIX: Build the actual firebase_credentials.json file inside the container.
-# This forces the full key to be present without getting clipped by Render.
+# CRITICAL FIX: Direct Injection of Firebase Key File Into Storage
 # --------------------------------------------------------------------------
-RUN mkdir -p /var/www/html/storage/app && echo '{\n\
+RUN mkdir -p /var/www/html/storage/app && printf '{\n\
   "type": "service_account",\n\
   "project_id": "furecipe",\n\
   "private_key_id": "b0c5e9888d72c64c75e0dba512325a1417fcefa6",\n\
@@ -35,7 +34,7 @@ RUN mkdir -p /var/www/html/storage/app && echo '{\n\
 # Install dependencies without dev packages
 RUN composer install --no-dev --optimize-autoloader --ignore-platform-reqs
 
-# Fix permissions for Laravel storage and bootstrap cache folders (and our new json file)
+# Fix permissions for Laravel storage and bootstrap cache folders
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
