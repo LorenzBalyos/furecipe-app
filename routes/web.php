@@ -14,24 +14,27 @@ use App\Http\Controllers\ProfileController;
  * Gracefully handles Render environments and local fallbacks smoothly.
  */
 function getFirestore() {
-    // 1. Production Deployment (Render) Environment Check
-    $firebaseJson = env('FIREBASE_JSON');
-
-    if (!empty($firebaseJson)) {
-        // Strip out any accidental hidden characters or double-escaped backslashes
-        $cleanJson = str_replace(['\n', '\\\\n'], "\n", $firebaseJson);
-        $config = json_decode($cleanJson, true);
-
-        if (is_array($config)) {
-            return new FirestoreClient([
-                'projectId' => $config['project_id'] ?? 'furecipe',
-                'keyFile'   => $config,
-                'transport' => 'rest'
-            ]);
-        }
+    // 1. Force production array injection if running on Render environment
+    if (isset($_SERVER['RENDER']) || env('APP_ENV') === 'production') {
+        return new FirestoreClient([
+            'projectId' => 'furecipe',
+            'transport' => 'rest',
+            'keyFile' => [
+                "type"                        => "service_account",
+                "project_id"                  => "furecipe",
+                "private_key_id"              => "b0c5e9888d72c64c75e0dba512325a1417fcefa6",
+                "private_key"                 => "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCmK7u8YvWc68u6\n7L1pAexmZf38YIeOa98zYtFkR8w96PzX05P1V8WcQWb9z74D8Y88A58X2W38vG9w\nK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38\nvG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8\nX8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9\nyv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8\nQy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6\naR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z\n2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9w\nK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W3\n8vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O\n8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z\n9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n\n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D\n6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5\nz2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9\nwK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W\n38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9\nO8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7\nz9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7\nn8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8\nD6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G\n-----END PRIVATE KEY-----\n",
+                "client_email"               => "firebase-adminsdk-pmed8@furecipe.iam.gserviceaccount.com",
+                "client_id"                  => "105581559812920235372",
+                "auth_uri"                    => "https://accounts.google.com/o/oauth2/auth",
+                "token_uri"                   => "https://oauth2.googleapis.com/token",
+                "auth_provider_x509_cert_url" => "https://www.googleapis.com/oauth2/v1/certs",
+                "client_x509_cert_url"        => "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-pmed8%40furecipe.iam.gserviceaccount.com"
+            ]
+        ]);
     }
 
-    // 2. Local Fallback (For your local machine development)
+    // 2. Local Fallback Only (Runs on localhost environment)
     $path = storage_path('firebase_credentials.json');
     if (!file_exists($path)) {
         $path = storage_path('app/firebase_credentials.json');
@@ -48,10 +51,22 @@ function getFirestore() {
         }
     }
 
-    // 3. Absolute Fallback to prevent unhandled core library crash
+    // 3. Complete hardcoded block if local environment config file fails to decode
     return new FirestoreClient([
         'projectId' => 'furecipe',
-        'transport' => 'rest'
+        'transport' => 'rest',
+        'keyFile' => [
+            "type"                        => "service_account",
+            "project_id"                  => "furecipe",
+            "private_key_id"              => "b0c5e9888d72c64c75e0dba512325a1417fcefa6",
+            "private_key"                 => "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCmK7u8YvWc68u6\n7L1pAexmZf38YIeOa98zYtFkR8w96PzX05P1V8WcQWb9z74D8Y88A58X2W38vG9w\nK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38\nvG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8\nX8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9\nyv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8\nQy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6\naR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z\n2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9w\nK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W3\n8vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O\n8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z\n9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n\n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D\n6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5\nz2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9\nwK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W\n38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9\nO8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7\nz9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7\nn8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8\nD6aR7n8Qy7z9yv9O8X8W38vG9wK9G5z2C8D6aR7n8Qy7z9yv9O8X8W38vG9wK9G\n-----END PRIVATE KEY-----\n",
+            "client_email"               => "firebase-adminsdk-pmed8@furecipe.iam.gserviceaccount.com",
+            "client_id"                  => "105581559812920235372",
+            "auth_uri"                    => "https://accounts.google.com/o/oauth2/auth",
+            "token_uri"                   => "https://oauth2.googleapis.com/token",
+            "auth_provider_x509_cert_url" => "https://www.googleapis.com/oauth2/v1/certs",
+            "client_x509_cert_url"        => "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-pmed8%40furecipe.iam.gserviceaccount.com"
+        ]
     ]);
 }
 
