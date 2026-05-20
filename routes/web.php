@@ -11,36 +11,46 @@ use App\Http\Controllers\ProfileController;
 
 /**
  * Initialize connection with Google Cloud Firestore NoSQL Database
- * Supporting direct JSON environment variables and container file paths
+ * Supporting direct JSON environment variables and container file paths with sanitization
  */
 function getFirestore() {
     $firebaseJson = env('FIREBASE_JSON');
 
     if (!empty($firebaseJson)) {
-        // If the variable points to our injected file path inside the Docker container
+        // 1. If it points to a physical file injected inside Render/Docker container
         if (file_exists($firebaseJson)) {
             $config = json_decode(file_get_contents($firebaseJson), true);
         } else {
-            // Fallback if it is a raw single-line JSON string
-            $config = json_decode($firebaseJson, true);
+            // 2. Clean the string from common cloud provider environment parsing traps
+            $cleanJson = trim($firebaseJson);
+            $cleanJson = stripslashes($cleanJson); // Removes accidental escaping backslashes
+
+            $config = json_decode($cleanJson, true);
         }
 
-        return new FirestoreClient([
-            'keyFile' => $config,
-            'transport' => 'rest'
-        ]);
+        // Ensure $config was parsed into a valid array before handing it over
+        if (is_array($config)) {
+            return new FirestoreClient([
+                'keyFile' => $config,
+                'transport' => 'rest'
+            ]);
+        }
     }
 
-    // Fallback path matching for local offline development architectures
+    // 3. Fallback path matching for local offline development architectures
     $path = storage_path('firebase_credentials.json');
     if (!file_exists($path)) {
         $path = storage_path('app/firebase_credentials.json');
     }
 
     if (file_exists($path)) {
-        putenv('GOOGLE_APPLICATION_CREDENTIALS=' . $path);
+        return new FirestoreClient([
+            'keyFile' => json_decode(file_get_contents($path), true),
+            'transport' => 'rest'
+        ]);
     }
 
+    // Ultimate fallback matching system environment settings
     return new FirestoreClient(['transport' => 'rest']);
 }
 
